@@ -1,4 +1,4 @@
-import { Container, Typography, Box, AppBar, Toolbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, RadioGroup, FormControlLabel, Radio, FormControl, FormLabel } from '@mui/material';
+import { Container, Typography, Box, AppBar, Toolbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, RadioGroup, FormControlLabel, Radio, FormControl, FormLabel, Tooltip } from '@mui/material';
 // ...existing code...
 import MapClick from './MapClick';
 import { useState, useEffect } from 'react';
@@ -189,14 +189,53 @@ const WeatherDashboard = () => {
         </Paper>
 
         {/* Profile selection dialog on first load */}
-        <Dialog open={profileDialogOpen} onClose={() => setProfileDialogOpen(false)}>
-          <DialogTitle>¿Qué opción encaja más con su perfil?</DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
-              <Button variant={selectedProfile && selectedProfile.key === 'agri' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'agri', label: 'Agricultura / Ganadería', emoji: '🌾' }); handleConfirmProfile(); }}>🌾 Agricultura / Ganadería</Button>
-              <Button variant={selectedProfile && selectedProfile.key === 'events' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'events', label: 'Eventos al aire libre / Recreación', emoji: '🎪' }); handleConfirmProfile(); }}>🎪 Eventos / Recreación</Button>
-              <Button variant={selectedProfile && selectedProfile.key === 'transport' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'transport', label: 'Transporte / Navegación', emoji: '🚢' }); handleConfirmProfile(); }}>🚢 Transporte / Navegación</Button>
-              <Button variant={selectedProfile && selectedProfile.key === 'home' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'home', label: 'Uso diario / Hogar', emoji: '🏠' }); handleConfirmProfile(); }}>🏠 Uso diario / Hogar</Button>
+        <Dialog open={profileDialogOpen} onClose={() => setProfileDialogOpen(false)} fullWidth maxWidth="sm">
+          <DialogTitle sx={{ fontSize: '1.25rem', pb: 1 }}>¿Qué opción encaja más con su perfil?</DialogTitle>
+          <DialogContent sx={{ pt: 0 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 1 }}>
+              <Tooltip title={"Conocer el clima permite planificar siembra, cosecha y riego, proteger cultivos de lluvias fuertes o heladas, y anticipar eventos extremos que podrían afectar animales y plantas."} arrow>
+                <Button
+                  variant={selectedProfile && selectedProfile.key === 'agri' ? 'contained' : 'outlined'}
+                  onClick={() => { setSelectedProfile({ key: 'agri', label: 'Agricultura / Ganadería', emoji: '🌾' }); handleConfirmProfile(); }}
+                  sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
+                >
+                  <Box component="span" sx={{ fontSize: '2.2rem', lineHeight: 1 }}>{'🌾'}</Box>
+                  <Box component="span" sx={{ fontSize: '0.95rem', textAlign: 'center' }}>Agricultura / Ganadería</Box>
+                </Button>
+              </Tooltip>
+
+              <Tooltip title={"La previsión del clima ayuda a decidir la fecha y logística de eventos al aire libre, evitando cancelaciones, accidentes o incomodidades por lluvia, calor extremo o viento fuerte."} arrow>
+                <Button
+                  variant={selectedProfile && selectedProfile.key === 'events' ? 'contained' : 'outlined'}
+                  onClick={() => { setSelectedProfile({ key: 'events', label: 'Eventos al aire libre / Recreación', emoji: '🎪' }); handleConfirmProfile(); }}
+                  sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
+                >
+                  <Box component="span" sx={{ fontSize: '2.2rem', lineHeight: 1 }}>{'🎪'}</Box>
+                  <Box component="span" sx={{ fontSize: '0.95rem', textAlign: 'center' }}>Eventos / Recreación</Box>
+                </Button>
+              </Tooltip>
+
+              <Tooltip title={"La prevención del clima permite planificar rutas seguras en carreteras, vías férreas, puertos y aeropuertos, reduciendo riesgos de accidentes por lluvia intensa, tormentas o visibilidad limitada."} arrow>
+                <Button
+                  variant={selectedProfile && selectedProfile.key === 'transport' ? 'contained' : 'outlined'}
+                  onClick={() => { setSelectedProfile({ key: 'transport', label: 'Transporte / Navegación', emoji: '🚢' }); handleConfirmProfile(); }}
+                  sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
+                >
+                  <Box component="span" sx={{ fontSize: '2.2rem', lineHeight: 1 }}>{'🚢'}</Box>
+                  <Box component="span" sx={{ fontSize: '0.95rem', textAlign: 'center' }}>Transporte / Navegación</Box>
+                </Button>
+              </Tooltip>
+
+              <Tooltip title={"Conocer la previsión meteorológica ayuda a tomar decisiones cotidianas: vestimenta, protección de viviendas, evitar actividades peligrosas bajo lluvia o tormentas y optimizar consumo de energía en días extremos."} arrow>
+                <Button
+                  variant={selectedProfile && selectedProfile.key === 'home' ? 'contained' : 'outlined'}
+                  onClick={() => { setSelectedProfile({ key: 'home', label: 'Uso diario / Hogar', emoji: '🏠' }); handleConfirmProfile(); }}
+                  sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
+                >
+                  <Box component="span" sx={{ fontSize: '2.2rem', lineHeight: 1 }}>{'🏠'}</Box>
+                  <Box component="span" sx={{ fontSize: '0.95rem', textAlign: 'center' }}>Uso diario / Hogar</Box>
+                </Button>
+              </Tooltip>
             </Box>
           </DialogContent>
         </Dialog>
