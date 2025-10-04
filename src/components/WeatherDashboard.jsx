@@ -49,6 +49,37 @@ const WeatherDashboard = () => {
   const [searching, setSearching] = useState(false);
   const [showCoordsDisplay, setShowCoordsDisplay] = useState(false);
 
+  const handleUseDeviceLocation = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocalización no disponible en este navegador');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      setSelected({ lat, lng: lon });
+      setPosition([lat, lon]);
+      setMarkerExists(true);
+      // reverse geocode quickly to set locality
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&addressdetails=1`);
+        const data = await res.json();
+        if (data && data.address) {
+          const a = data.address;
+          // prefer more specific parts for device location
+          const place = a.suburb || a.neighbourhood || a.hamlet || a.village || a.town || a.city || a.county || null;
+          const state = a.state || a.region || null;
+          const loc = place && state ? `${place}, ${state}` : (place || state || a.country || data.display_name);
+          setLocality(loc || null);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, (err) => {
+      alert('No se pudo obtener la ubicación del dispositivo');
+    });
+  };
+
   const handleSearchCity = async () => {
     if (!searchQuery) return;
     setSearching(true);
@@ -107,6 +138,7 @@ const WeatherDashboard = () => {
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <Button variant={selectMode === 'map' ? 'contained' : 'outlined'} onClick={() => setSelectMode('map')}>Usar mapa</Button>
             <Button variant={selectMode === 'city' ? 'contained' : 'outlined'} onClick={() => setSelectMode('city')}>Buscar ciudad</Button>
+            <Button variant={selectMode === 'device' ? 'contained' : 'outlined'} onClick={() => { setSelectMode('device'); handleUseDeviceLocation(); }}>Usar mi ubicación</Button>
           </Box>
 
           <MapClick onClick={handleMapClick} initialCenter={[20,0]} initialZoom={2} height={360} position={position} onMarkerCreated={(exists) => setMarkerExists(Boolean(exists))} onLocation={(info) => { setLocality(info.locality || info.display_name); setMarkerExists(true); }} />
