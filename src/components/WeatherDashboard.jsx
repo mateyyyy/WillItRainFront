@@ -1,7 +1,7 @@
 import { Container, Typography, Box, AppBar, Toolbar, Paper, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, RadioGroup, FormControlLabel, Radio, FormControl, FormLabel } from '@mui/material';
 // ...existing code...
 import MapClick from './MapClick';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const WeatherDashboard = () => {
   const [selected, setSelected] = useState(null);
@@ -48,6 +48,34 @@ const WeatherDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [showCoordsDisplay, setShowCoordsDisplay] = useState(false);
+  // user profile selection
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+
+  useEffect(() => {
+    // check if user profile is stored
+    try {
+      const stored = localStorage.getItem('userProfile');
+      if (stored) {
+        setSelectedProfile(JSON.parse(stored));
+        setProfileDialogOpen(false);
+      } else {
+        setProfileDialogOpen(true);
+      }
+    } catch (e) {
+      setProfileDialogOpen(true);
+    }
+  }, []);
+
+  const handleConfirmProfile = () => {
+    if (!selectedProfile) return;
+    try {
+      localStorage.setItem('userProfile', JSON.stringify(selectedProfile));
+    } catch (e) {
+      // ignore
+    }
+    setProfileDialogOpen(false);
+  };
 
   const handleUseDeviceLocation = () => {
     if (!navigator.geolocation) {
@@ -120,17 +148,18 @@ const WeatherDashboard = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ mb: 4 }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Will It Rain?
-          </Typography>
+      <AppBar position="static" sx={{ mb: 0, backgroundColor: 'transparent', boxShadow: 'none' }}>
+        <Toolbar sx={{ minHeight: 56, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+          {/* profile block top-right */}
+          <Box sx={{ position: 'absolute', right: 12, top: 8, display: 'flex', gap: 1, alignItems: 'center' }}>
+            {selectedProfile ? (
+              <Typography variant="subtitle2" sx={{ color: '#9FE8FF' }}>{selectedProfile.emoji} {selectedProfile.label}</Typography>
+            ) : null}
+            <Button onClick={() => setProfileDialogOpen(true)} sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', px: 1, py: 0.35, borderRadius: 1 }}>Cambiar perfil</Button>
+          </Box>
         </Toolbar>
       </AppBar>
       <Container>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Today's Weather Forecast
-        </Typography>
         <Paper sx={{ p: 2, mb: 4 }} elevation={2}>
           <Typography variant="h6" gutterBottom>
             Seleccione una ubicacion en el mapa
@@ -158,6 +187,19 @@ const WeatherDashboard = () => {
             </Box>
           ) : null}
         </Paper>
+
+        {/* Profile selection dialog on first load */}
+        <Dialog open={profileDialogOpen} onClose={() => setProfileDialogOpen(false)}>
+          <DialogTitle>¿Qué opción encaja más con su perfil?</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mt: 1 }}>
+              <Button variant={selectedProfile && selectedProfile.key === 'agri' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'agri', label: 'Agricultura / Ganadería', emoji: '🌾' }); handleConfirmProfile(); }}>🌾 Agricultura / Ganadería</Button>
+              <Button variant={selectedProfile && selectedProfile.key === 'events' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'events', label: 'Eventos al aire libre / Recreación', emoji: '🎪' }); handleConfirmProfile(); }}>🎪 Eventos / Recreación</Button>
+              <Button variant={selectedProfile && selectedProfile.key === 'transport' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'transport', label: 'Transporte / Navegación', emoji: '🚢' }); handleConfirmProfile(); }}>🚢 Transporte / Navegación</Button>
+              <Button variant={selectedProfile && selectedProfile.key === 'home' ? 'contained' : 'outlined'} onClick={() => { setSelectedProfile({ key: 'home', label: 'Uso diario / Hogar', emoji: '🏠' }); handleConfirmProfile(); }}>🏠 Uso diario / Hogar</Button>
+            </Box>
+          </DialogContent>
+        </Dialog>
         {/* Removed WeatherCard grid from the homepage as requested */}
 
         {/* Dialog to ask user when they want to check the rain for the selected location */}
