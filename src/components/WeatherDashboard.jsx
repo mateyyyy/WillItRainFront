@@ -54,7 +54,7 @@ const WeatherDashboard = () => {
         if (targetDate) params.set('date', targetDate);
         else params.set('hours', String(Number(days) * 24));
 
-  const url = `http://localhost:8000/climatology/d?${params.toString()}`;
+  const url = `https://nondelicately-aphoristic-esme.ngrok-free.dev/climatology/d?${params.toString()}`;
         const res = await fetch(url);
         if (!res.ok) {
           const t = await res.text();
