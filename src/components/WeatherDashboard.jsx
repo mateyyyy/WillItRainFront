@@ -54,7 +54,7 @@ const WeatherDashboard = () => {
         if (targetDate) params.set('date', targetDate);
         else params.set('hours', String(Number(days) * 24));
 
-  const url = `https://nondelicately-aphoristic-esme.ngrok-free.dev/climatology/d?${params.toString()}`;
+  const url = `http://localhost:8000/climatology/?${params.toString()}`;
         const res = await fetch(url);
         if (!res.ok) {
           const t = await res.text();
@@ -490,8 +490,12 @@ const WeatherDashboard = () => {
             flexDirection: 'column', 
             alignItems: 'center', 
             justifyContent: 'center',
+            overflow: "auto",
             px: 2,
             py: 4,
+            '&::-webkit-scrollbar': {
+              display: 'none'
+            },    
             gap: 4
           }}>
             {/* Contenido centrado - Predicción */}
@@ -519,7 +523,7 @@ const WeatherDashboard = () => {
                 </Paper>
               )}
 
-              {willItRainResult && (
+              {willItRainResult && climatology && (
                 <Paper sx={{ 
                   p: 3, 
                   borderRadius: 3,
@@ -544,18 +548,10 @@ const WeatherDashboard = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  <Box>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      📅 <strong>Período:</strong> Próximos {willItRainResult.hoursAnalyzed} horas
-                    </Typography>
-                  </Box>
+                  null
                 )}
                 
                 <Box sx={{ mt: 2 }}>
-                  <Typography variant="h6" sx={{ color: willItRainResult.rainProbability > 50 ? '#d32f2f' : willItRainResult.rainProbability > 25 ? '#f57c00' : '#388e3c' }}>
-                    🌧️ La predicción para esta fecha es de: {willItRainResult.rainProbability}% de probabilidad de precipitación
-                  </Typography>
-                  
                   {willItRainResult.temperatureData && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body1" sx={{ mb: 1 }}>
@@ -604,14 +600,77 @@ const WeatherDashboard = () => {
                   )}
                   {/* Climatology probabilities returned from backend */}
                   {climatology && climatology.probabilities && (
-                    <Box sx={{ mt: 3, p: 2, borderRadius: 2, backgroundColor: 'rgba(250,250,250,0.6)' }}>
-                      <Typography variant="subtitle1" sx={{ mb: 1 }}>📊 Probabilidades históricas (climatología)</Typography>
-                      <Typography variant="body2">Muy caliente (&gt; {climatology.thresholds_used?.hot_C ?? '?'}°C): {(climatology.probabilities.prob_very_hot_above_33C * 100).toFixed(0)}%</Typography>
-                      <Typography variant="body2">Muy ventoso (&gt; {climatology.thresholds_used?.windy_ms ?? '?'} m/s): {(climatology.probabilities.prob_very_windy_above_8ms * 100).toFixed(0)}%</Typography>
-                      <Typography variant="body2">Muy húmedo (&gt; {climatology.thresholds_used?.wet_mm ?? '?'} mm): {(climatology.probabilities.prob_very_wet_above_5mm * 100).toFixed(0)}%</Typography>
-                      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}</Typography>
-                    </Box>
-                  )}
+  <Box sx={{ mt: 3, display: 'grid', gap: 2 }}>
+    <Typography variant="subtitle1" sx={{ mb: 1 }}>📊 Probabilidades históricas (climatología)</Typography>
+    
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {[
+        {
+          label: '🔥 Muy caliente',
+          value: (climatology.probabilities.prob_very_hot_above_33C * 100).toFixed(0),
+          threshold: climatology.thresholds_used?.hot_C ?? '?',
+          color: '#e53935',
+          icon: '🔥'
+        },
+        {
+          label: '💨 Muy ventoso',
+          value: (climatology.probabilities.prob_very_windy_above_8ms * 100).toFixed(0),
+          threshold: climatology.thresholds_used?.windy_ms ?? '?',
+          color: '#1e88e5',
+          icon: '💨'
+        },
+        {
+          label: '💧 Muy húmedo',
+          value: (climatology.probabilities.prob_very_wet_above_5mm * 100).toFixed(0),
+          threshold: climatology.thresholds_used?.wet_mm ?? '?',
+          color: '#43a047',
+          icon: '💧'
+        }
+      ].map((item, idx) => (
+        <Paper key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+          <Box sx={{ fontSize: '1.8rem' }}>{item.icon}</Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{item.label} (&gt; {item.threshold})</Typography>
+            <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
+              <Box sx={{ width: `${item.value}%`, height: '100%', borderRadius: 1, backgroundColor: item.color, transition: 'width 0.5s ease' }} />
+            </Box>
+          </Box>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{item.value}%</Typography>
+        </Paper>
+      ))}
+
+      {/* NUEVA MÉTRICA: ÍNDICE DE INCOMODIDAD */}
+      {(() => {
+        const pHot = climatology.probabilities.prob_very_hot_above_33C || 0;
+        const pWindy = climatology.probabilities.prob_very_windy_above_8ms || 0;
+        const pWet = climatology.probabilities.prob_very_wet_above_5mm || 0;
+        // IIC: suma de probabilidades menos producto para normalizar
+        const IIC = (pHot + pWindy + pWet - (pHot * pWindy * pWet)) * 100;
+        const IICClamped = Math.min(Math.max(IIC, 0), 100).toFixed(0);
+        let color = '#43a047'; // verde cómodo
+        if (IICClamped > 30) color = '#fbc02d'; // amarillo medio
+        if (IICClamped > 60) color = '#d32f2f'; // rojo incómodo
+
+        return (
+          <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+            <Box sx={{ fontSize: '1.8rem' }}>⚠️</Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Incomodidad Climática</Typography>
+              <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
+                <Box sx={{ width: `${IICClamped}%`, height: '100%', borderRadius: 1, backgroundColor: color, transition: 'width 0.5s ease' }} />
+              </Box>
+            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{IICClamped}%</Typography>
+          </Paper>
+        );
+      })()}
+    </Box>
+
+    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>
+      Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}
+    </Typography>
+  </Box>
+)}
                 </Box>
               </Paper>
               )}
