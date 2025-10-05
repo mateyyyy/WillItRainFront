@@ -224,19 +224,21 @@ const WeatherDashboard = () => {
   };
 
   return (
-    <Box sx={{ 
-      width: '100vw', 
-      height: '100vh', 
-      overflow: 'hidden', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      position: 'fixed', 
-      top: 0, 
-      left: 0,
-      background: 'linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #0d47a1 100%)'
-    }}>
+    <Box sx={{
+    width: '100vw',
+    height: '100vh',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    background: 'linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #0d47a1 100%)',
+    fontSize: { xs: '0.85rem', sm: '1rem' }, // escala textos
+  }}>
       <AppBar position="static" sx={{ mb: 0, backgroundColor: 'transparent', boxShadow: 'none' }}>
-        <Toolbar sx={{ minHeight: 48, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <Toolbar sx={{ minHeight: 48, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
           {/* profile block top-right */}
           <Box sx={{ position: 'absolute', right: 12, top: 8, display: 'flex', gap: 1, alignItems: 'center' }}>
             {selectedProfile ? (
@@ -244,8 +246,29 @@ const WeatherDashboard = () => {
             ) : null}
             <Button onClick={() => setProfileDialogOpen(true)} size="small" sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', px: 1, py: 0.25, borderRadius: 1, fontSize: '0.8rem' }}>Cambiar perfil</Button>
           </Box>
+          {/* Botón para volver al mapa - Abajo, mismo ancho */}
+  {!showMap && 
+  <Box sx={{ textAlign: 'center' }}>
+   <Button 
+    variant="contained" 
+    onClick={handleBackToMap}
+    sx={{ 
+      borderRadius: 2,
+
+      fontSize: '0.9rem',
+      fontWeight: 600,
+      backgroundColor: '#fff',
+      color: '#1a237e',
+      '&:hover': { backgroundColor: '#f0f0f0' }
+    }}
+  >
+    🗺️ Volver al mapa
+  </Button>
+</Box>}
         </Toolbar>
+        
       </AppBar>
+      
       
       {showMap ? (
         <Box sx={{ 
@@ -254,6 +277,7 @@ const WeatherDashboard = () => {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
+          overflowY: 'auto',
           px: 2,
           py: 2
         }}>
@@ -484,20 +508,18 @@ const WeatherDashboard = () => {
         </Dialog>
 
         {!showMap && (
-          <Box sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            overflow: "auto",
-            px: 2,
-            py: 4,
-            '&::-webkit-scrollbar': {
-              display: 'none'
-            },    
-            gap: 4
-          }}>
+            <Box sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+              overflowY: 'auto',
+              px: 2,
+              gap: 1,
+
+              // allow the results area to scroll without hiding content
+            }}>
             {/* Contenido centrado - Predicción */}
             <Box sx={{ 
               display: 'flex', 
@@ -507,7 +529,7 @@ const WeatherDashboard = () => {
               maxWidth: '600px',
               flex: 1
             }}>
-              {requestLoading && (
+              {requestLoading && !climatology && (
                 <Paper sx={{ 
                   p: 3, 
                   borderRadius: 3,
@@ -530,8 +552,13 @@ const WeatherDashboard = () => {
                   backgroundColor: 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(10px)',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                  width: '100%'
+                  width: '100%',
+                  // constrain height so the content doesn't overflow the viewport
+                  maxHeight: 'auto',
+                  overflowY: 'auto',
+                  '&::-webkit-scrollbar': { width: 8 }
                 }}>
+                  <Box sx={{ width: '100%' }}>
                 <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
                   🌤️ Predicción Meteorológica
                 </Typography>
@@ -551,7 +578,7 @@ const WeatherDashboard = () => {
                   null
                 )}
                 
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2}}>
                   {willItRainResult.temperatureData && (
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body1" sx={{ mb: 1 }}>
@@ -599,115 +626,164 @@ const WeatherDashboard = () => {
                     </Typography>
                   )}
                   {/* Climatology probabilities returned from backend */}
-                  {climatology && climatology.probabilities && (
-  <Box sx={{ mt: 3, display: 'grid', gap: 2 }}>
-    <Typography variant="subtitle1" sx={{ mb: 1 }}>📊 Probabilidades históricas (climatología)</Typography>
-    
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      {[
-        {
-          label: '🔥 Muy caliente',
-          value: (climatology.probabilities.prob_very_hot_above_33C * 100).toFixed(0),
-          threshold: climatology.thresholds_used?.hot_C ?? '?',
-          color: '#e53935',
-          icon: '🔥'
-        },
-        {
-          label: '💨 Muy ventoso',
-          value: (climatology.probabilities.prob_very_windy_above_8ms * 100).toFixed(0),
-          threshold: climatology.thresholds_used?.windy_ms ?? '?',
-          color: '#1e88e5',
-          icon: '💨'
-        },
-        {
-          label: '💧 Muy húmedo',
-          value: (climatology.probabilities.prob_very_wet_above_5mm * 100).toFixed(0),
-          threshold: climatology.thresholds_used?.wet_mm ?? '?',
-          color: '#43a047',
-          icon: '💧'
-        }
-      ].map((item, idx) => (
-        <Paper key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-          <Box sx={{ fontSize: '1.8rem' }}>{item.icon}</Box>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{item.label} (&gt; {item.threshold})</Typography>
-            <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
-              <Box sx={{ width: `${item.value}%`, height: '100%', borderRadius: 1, backgroundColor: item.color, transition: 'width 0.5s ease' }} />
-            </Box>
-          </Box>
-          <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{item.value}%</Typography>
-        </Paper>
-      ))}
+                 {/* Probabilidades históricas (climatología) */}
+                {climatology && climatology.probabilities && (
+                  <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>📊 Probabilidades históricas (climatología)</Typography>
 
-      {/* NUEVA MÉTRICA: ÍNDICE DE INCOMODIDAD */}
-      {(() => {
-        const pHot = climatology.probabilities.prob_very_hot_above_33C || 0;
-        const pWindy = climatology.probabilities.prob_very_windy_above_8ms || 0;
-        const pWet = climatology.probabilities.prob_very_wet_above_5mm || 0;
-        // IIC: suma de probabilidades menos producto para normalizar
-        const IIC = (pHot + pWindy + pWet - (pHot * pWindy * pWet)) * 100;
-        const IICClamped = Math.min(Math.max(IIC, 0), 100).toFixed(0);
-        let color = '#43a047'; // verde cómodo
-        if (IICClamped > 30) color = '#fbc02d'; // amarillo medio
-        if (IICClamped > 60) color = '#d32f2f'; // rojo incómodo
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {[ // barras de probabilidad
+                        {
+                          label: '🔥 Muy caliente',
+                          value: (climatology.probabilities.prob_very_hot_above_33C * 100).toFixed(0),
+                          color: '#e53935',
+                          icon: '🔥'
+                        },
+                        {
+                          label: '💨 Muy ventoso',
+                          value: (climatology.probabilities.prob_very_windy_above_8ms * 100).toFixed(0),
+                          color: '#1e88e5',
+                          icon: '💨'
+                        },
+                        {
+                          label: '💧 Muy húmedo',
+                          value: (climatology.probabilities.prob_very_wet_above_5mm * 100).toFixed(0),
+                          color: '#43a047',
+                          icon: '💧'
+                        },
+                        {
+                          label: '❄️ Muy frío',
+                          value: (climatology.probabilities.prob_very_cold_below_0C * 100).toFixed(0),
+                          color: '#2196f3',
+                          icon: '❄️'
+                        }
+                      ].map((item, idx) => (
+                        <Paper key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                          <Box sx={{ fontSize: '1.8rem' }}>{item.icon}</Box>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{item.label}</Typography>
+                            <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
+                              <Box sx={{ width: `${item.value}%`, height: '100%', borderRadius: 1, backgroundColor: item.color, transition: 'width 0.5s ease' }} />
+                            </Box>
+                          </Box>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{item.value}%</Typography>
+                        </Paper>
+                      ))}
 
-        return (
-          <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-            <Box sx={{ fontSize: '1.8rem' }}>⚠️</Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Incomodidad Climática</Typography>
-              <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
-                <Box sx={{ width: `${IICClamped}%`, height: '100%', borderRadius: 1, backgroundColor: color, transition: 'width 0.5s ease' }} />
-              </Box>
-            </Box>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{IICClamped}%</Typography>
-          </Paper>
-        );
-      })()}
+                      {/* Umbrales en fila */}
+
+                      <Typography 
+  variant="subtitle1" 
+  sx={{ textAlign: 'center', fontWeight: 'bold', mb: 1, color: '#0d2833' }}
+>
+  🌡️ Umbrales de Referencia
+</Typography>
+
+<Paper
+  sx={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+    gap: 2,
+    p: 1,
+    borderRadius: 3,
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.9))',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  }}
+>
+  {[
+    { icon: '💧', label: 'Lluvia', value: climatology.thresholds_used?.wet_mm ?? '?', unit: 'mm', color: '#4fc3f7' },
+    { icon: '💨', label: 'Viento', value: climatology.thresholds_used?.windy_ms ?? '?', unit: 'm/s', color: '#90caf9' },
+    { icon: '🔥', label: 'Calor', value: climatology.thresholds_used?.hot_C ?? '?', unit: '°C', color: '#ff8a65' },
+    { icon: '❄️', label: 'Frío', value: climatology.thresholds_used?.cold_C ?? '?', unit: '°C', color: '#81d4fa' },
+  ].map((item, idx) => (
+    <Box key={idx} sx={{ textAlign: 'center' }}>
+      <Box sx={{ fontSize: '1.8rem', mb: 0.5 }}>{item.icon}</Box>
+      <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
+        {item.label}
+      </Typography>
+      <Typography variant="body2" sx={{ color: item.color }}>
+        <strong>{item.value}</strong> {item.unit}
+      </Typography>
     </Box>
+  ))}
+</Paper>
 
-    <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>
-      Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}
-    </Typography>
-  </Box>
-)}
+
+                      {/* Índice de incomodidad climática */}
+                      {(() => {
+                        const pHot = climatology.probabilities.prob_very_hot_above_33C || 0;
+                        const pWindy = climatology.probabilities.prob_very_windy_above_8ms || 0;
+                        const pWet = climatology.probabilities.prob_very_wet_above_5mm || 0;
+                        const pCold = climatology.probabilities.prob_very_cold_below_0C || 0;
+                        const IIC = (pHot + pWindy + pWet + pCold - (pHot * pWindy * pWet * pCold)) * 100;
+                        const IICClamped = Math.min(Math.max(IIC, 0), 100).toFixed(0);
+                        let color = '#43a047';
+                        if (IICClamped > 30) color = '#fbc02d';
+                        if (IICClamped > 60) color = '#d32f2f';
+
+                        return (
+                          <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)', mt: 1 }}>
+                            <Box sx={{ fontSize: '1.8rem' }}>⚠️</Box>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Incomodidad Climática</Typography>
+                              <Box sx={{ height: 10, borderRadius: 1, backgroundColor: '#eee', mt: 0.5 }}>
+                                <Box sx={{ width: `${IICClamped}%`, height: '100%', borderRadius: 1, backgroundColor: color, transition: 'width 0.5s ease' }} />
+                              </Box>
+                            </Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{IICClamped}%</Typography>
+                          </Paper>
+                        );
+                      })()}
+
+                      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>
+                        Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* Recomendación personalizada según perfil */}
+                {selectedProfile && climatology && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>💡 Recomendaciones para ti ({selectedProfile.label})</Typography>
+                    <Paper sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                      <Typography variant="body2">
+                        {(() => {
+                          const { key } = selectedProfile;
+                          const rainProb = (climatology.probabilities.prob_very_wet_above_5mm || 0) * 100;
+                          const windProb = (climatology.probabilities.prob_very_windy_above_8ms || 0) * 100;
+                          const hotProb = (climatology.probabilities.prob_very_hot_above_33C || 0) * 100;
+
+                          switch(key) {
+                            case 'agri':
+                              if (rainProb > 60) return '🌱 ¡Buen momento para sembrar o regar tus cultivos!';
+                              if (hotProb > 50) return '🌾 Cuidado con el calor intenso, protege tus cultivos.';
+                              return '🌿 Condiciones estables para la agricultura.';
+                            case 'events':
+                              if (rainProb > 40) return '☔ Considera posponer o mover tu evento, podría llover.';
+                              if (windProb > 50) return '💨 Atención al viento: estructuras y carpas podrían verse afectadas.';
+                              return '🎉 Buen clima para actividades al aire libre.';
+                            case 'transport':
+                              if (rainProb > 50) return '🚢 Riesgo de lluvia: revisa navegación y rutas de transporte.';
+                              if (windProb > 60) return '💨 Viento fuerte: prudencia en rutas marítimas o aéreas.';
+                              return '🛳️ Condiciones seguras para transporte y navegación.';
+                            case 'home':
+                              if (rainProb > 50) return '🏠 Lluvia prevista: revisa ventanas y techos, lleva paraguas.';
+                              if (hotProb > 50) return '🌡️ Calor intenso: hidrátate y usa protección solar.';
+                              return '😊 Clima estable para tu día a día.';
+                            default:
+                              return '🌤️ Clima estable, disfruta tu día.';
+                          }
+                        })()}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                )}
+
                 </Box>
+                  </Box>
               </Paper>
               )}
-            </Box>
-            
-            {/* Botón para volver al mapa - Abajo, mismo ancho */}
-            <Box sx={{ 
-              width: '100%', 
-              maxWidth: '600px',
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
-              <Button 
-                variant="contained" 
-                onClick={handleBackToMap}
-                fullWidth
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  gap: 2,
-                  py: 3,
-                  fontSize: '1.3rem',
-                  fontWeight: 'bold',
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  color: '#1a237e',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 1)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)'
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                🗺️ Volver al mapa
-              </Button>
             </Box>
           </Box>
         )}
