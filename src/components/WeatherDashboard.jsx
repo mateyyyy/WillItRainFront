@@ -13,7 +13,9 @@ const WeatherDashboard = () => {
   const [mode, setMode] = useState('days'); // 'days' or 'date'
   const [days, setDays] = useState(1);
   const [date, setDate] = useState('');
-  const [savedRequest, setSavedRequest] = useState(null);
+  const [willItRainResult, setWillItRainResult] = useState(null);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [showMap, setShowMap] = useState(true); // Controla si mostrar el mapa o los resultados
   // location text fields removed; selection comes from map pin or search
 
   const handleMapClick = (coords) => {
@@ -33,13 +35,36 @@ const WeatherDashboard = () => {
       targetDate = date;
     }
 
-    setSavedRequest({ 
-      coords: selected, 
-      mode, 
-      days: mode === 'days' ? Number(days) : null, 
-      date: targetDate
-    });
     setDialogOpen(false);
+    setShowMap(false); // Ocultar el mapa después de confirmar
+
+    // Fire request to backend to compute precipitation possibility
+    (async () => {
+      try {
+        setRequestLoading(true);
+        setWillItRainResult(null);
+        const params = new URLSearchParams();
+        params.set('lat', String(selected.lat));
+        params.set('lon', String(selected.lng));
+        // If user picked a specific date, send it; otherwise send hours (days->date used here)
+        if (targetDate) params.set('date', targetDate);
+        else params.set('hours', String(Number(days) * 24));
+
+  const url = `/api/willitrain?${params.toString()}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`Server error ${res.status}: ${t}`);
+        }
+        const json = await res.json();
+        setWillItRainResult(json);
+      } catch (err) {
+        console.error('Error requesting willitrain:', err);
+        alert('Error al consultar el servidor: ' + (err.message || err));
+      } finally {
+        setRequestLoading(false);
+      }
+    })();
   };
 
   // User selects between using the map pin or searching by city
@@ -48,7 +73,6 @@ const WeatherDashboard = () => {
   // search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
-  const [showCoordsDisplay, setShowCoordsDisplay] = useState(false);
   // user profile selection
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -158,49 +182,170 @@ const WeatherDashboard = () => {
     else alert('Primero selecciona una ubicación en el mapa o busca una ciudad');
   };
 
+  const handleBackToMap = () => {
+    setShowMap(true);
+    setWillItRainResult(null);
+    setSelected(null);
+    setPosition(null);
+    setMarkerExists(false);
+    setLocality(null);
+  };
+
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ 
+      width: '100vw', 
+      height: '100vh', 
+      overflow: 'hidden', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      position: 'fixed', 
+      top: 0, 
+      left: 0,
+      background: 'linear-gradient(135deg, #0c1445 0%, #1a237e 50%, #0d47a1 100%)'
+    }}>
       <AppBar position="static" sx={{ mb: 0, backgroundColor: 'transparent', boxShadow: 'none' }}>
-        <Toolbar sx={{ minHeight: 56, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <Toolbar sx={{ minHeight: 48, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
           {/* profile block top-right */}
           <Box sx={{ position: 'absolute', right: 12, top: 8, display: 'flex', gap: 1, alignItems: 'center' }}>
             {selectedProfile ? (
               <Typography variant="subtitle2" sx={{ color: '#9FE8FF' }}>{selectedProfile.emoji} {selectedProfile.label}</Typography>
             ) : null}
-            <Button onClick={() => setProfileDialogOpen(true)} sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', px: 1, py: 0.35, borderRadius: 1 }}>Cambiar perfil</Button>
+            <Button onClick={() => setProfileDialogOpen(true)} size="small" sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', px: 1, py: 0.25, borderRadius: 1, fontSize: '0.8rem' }}>Cambiar perfil</Button>
           </Box>
         </Toolbar>
       </AppBar>
-      <Container>
-        <Paper sx={{ p: 2, mb: 4 }} elevation={2}>
-          <Typography variant="h6" gutterBottom>
-            Seleccione una ubicacion en el mapa
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Button variant={selectMode === 'map' ? 'contained' : 'outlined'} onClick={() => setSelectMode('map')}>Usar mapa</Button>
-            <Button variant={selectMode === 'city' ? 'contained' : 'outlined'} onClick={() => setSelectMode('city')}>Buscar ciudad</Button>
-            <Button variant={selectMode === 'device' ? 'contained' : 'outlined'} onClick={() => { setSelectMode('device'); handleUseDeviceLocation(); }}>Usar mi ubicación</Button>
-          </Box>
-
-          <MapClick onClick={handleMapClick} initialCenter={[20,0]} initialZoom={2} height={360} position={position} onMarkerCreated={(exists) => setMarkerExists(Boolean(exists))} onLocation={(info) => { setLocality(info.locality || info.display_name); setMarkerExists(true); }} />
-
-          {selectMode === 'city' ? (
-            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-              <TextField fullWidth value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Ciudad, Provincia, País" />
-              <Button onClick={handleSearchCity} disabled={searching}>{searching ? 'Buscando...' : 'Buscar'}</Button>
+      
+      {showMap ? (
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          px: 2,
+          py: 2
+        }}>
+          <Paper sx={{ 
+            p: 3, 
+            borderRadius: 3,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            maxWidth: '600px',
+            width: '100%'
+          }}>
+            <Typography variant="h5" gutterBottom sx={{ 
+              textAlign: 'center', 
+              mb: 3, 
+              color: '#1a237e',
+              fontWeight: 'bold'
+            }}>
+              🌍 Seleccione una ubicación
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 1, mb: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant={selectMode === 'map' ? 'contained' : 'outlined'} 
+                onClick={() => setSelectMode('map')}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                🗺️ Mapa
+              </Button>
+              <Button 
+                variant={selectMode === 'city' ? 'contained' : 'outlined'} 
+                onClick={() => setSelectMode('city')}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                🔍 Buscar
+              </Button>
+              <Button 
+                variant={selectMode === 'device' ? 'contained' : 'outlined'} 
+                onClick={() => { setSelectMode('device'); handleUseDeviceLocation(); }}
+                size="small"
+                sx={{ borderRadius: 2 }}
+              >
+                📍 Mi ubicación
+              </Button>
             </Box>
-          ) : null}
-          <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Button variant="contained" disabled={!markerExists} onClick={() => { if (selected) { setShowCoordsDisplay(true); openDialogIfReady(); } else { alert('Primero selecciona una ubicación en el mapa o busca una ciudad'); } }}>{markerExists ? 'Siguiente' : 'Selecciona un punto'}</Button>
-          </Box>
-          {locality ? (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">Localidad: {locality}</Typography>
-            </Box>
-          ) : null}
-        </Paper>
 
-        {/* Profile selection dialog on first load */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              mb: 2,
+              borderRadius: 2,
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+            }}>
+              <MapClick 
+                onClick={handleMapClick} 
+                initialCenter={[20,0]} 
+                initialZoom={2} 
+                height={300} 
+                width={300}
+                position={position} 
+                onMarkerCreated={(exists) => setMarkerExists(Boolean(exists))} 
+                onLocation={(info) => { setLocality(info.locality || info.display_name); setMarkerExists(true); }} 
+              />
+            </Box>
+
+            {selectMode === 'city' ? (
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField 
+                  fullWidth 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  placeholder="Ciudad, Provincia, País" 
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                />
+                <Button 
+                  onClick={handleSearchCity} 
+                  disabled={searching}
+                  size="small"
+                  sx={{ borderRadius: 2 }}
+                >
+                  {searching ? 'Buscando...' : 'Buscar'}
+                </Button>
+              </Box>
+            ) : null}
+            
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Button 
+                variant="contained" 
+                disabled={!markerExists} 
+                onClick={() => { if (selected) { openDialogIfReady(); } else { alert('Primero selecciona una ubicación en el mapa o busca una ciudad'); } }} 
+                size="large"
+                sx={{ 
+                  borderRadius: 2,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                {markerExists ? '➡️ Siguiente' : '📍 Selecciona un punto'}
+              </Button>
+            </Box>
+            
+            {locality ? (
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ 
+                  fontSize: '0.9rem',
+                  color: '#666',
+                  fontStyle: 'italic'
+                }}>
+                  📍 {locality}
+                </Typography>
+              </Box>
+            ) : null}
+          </Paper>
+        </Box>
+      ) : null}
+      )}
+
+      {/* Profile selection dialog on first load */}
         <Dialog open={profileDialogOpen} onClose={handleCloseProfileDialog} fullWidth maxWidth="sm">
           <DialogTitle sx={{ fontSize: '1.25rem', pb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -307,20 +452,165 @@ const WeatherDashboard = () => {
           </DialogActions>
         </Dialog>
 
-        {savedRequest && showCoordsDisplay && (
-          <Paper sx={{ p: 2, mt: 4 }} elevation={1}>
-            <Typography variant="h6">Solicitud guardada</Typography>
-            <Typography>Coordenadas: {`${savedRequest.coords.lat.toFixed(6)}, ${savedRequest.coords.lng.toFixed(6)}`}</Typography>
-            <Typography>Tipo: {savedRequest.mode === 'days' ? `En ${savedRequest.days} días` : `Fecha ${savedRequest.date}`}</Typography>
-            {savedRequest.locationText ? (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="subtitle2">Ubicación ingresada:</Typography>
-                <Typography>{`${savedRequest.locationText.city || ''}${savedRequest.locationText.province ? ', ' + savedRequest.locationText.province : ''}${savedRequest.locationText.country ? ', ' + savedRequest.locationText.country : ''}`}</Typography>
-              </Box>
-            ) : null}
-          </Paper>
+        {!showMap && (
+          <Box sx={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            px: 2,
+            py: 4,
+            gap: 4
+          }}>
+            {/* Contenido centrado - Predicción */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              width: '100%', 
+              maxWidth: '600px',
+              flex: 1
+            }}>
+              {requestLoading && (
+                <Paper sx={{ 
+                  p: 3, 
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  width: '100%',
+                  textAlign: 'center'
+                }}>
+                  <Typography sx={{ fontSize: '1.1rem', color: '#1a237e', fontWeight: 'bold' }}>
+                    🔄 Consultando al servidor...
+                  </Typography>
+                </Paper>
+              )}
+
+              {willItRainResult && (
+                <Paper sx={{ 
+                  p: 3, 
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  width: '100%'
+                }}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
+                  🌤️ Predicción Meteorológica
+                </Typography>
+                
+                {willItRainResult.mode === 'specific_date' ? (
+                  <Box>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      📅 <strong>Fecha:</strong> {new Date(willItRainResult.requestedDate).toLocaleDateString('es-ES', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      📅 <strong>Período:</strong> Próximos {willItRainResult.hoursAnalyzed} horas
+                    </Typography>
+                  </Box>
+                )}
+                
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="h6" sx={{ color: willItRainResult.rainProbability > 50 ? '#d32f2f' : willItRainResult.rainProbability > 25 ? '#f57c00' : '#388e3c' }}>
+                    🌧️ La predicción para esta fecha es de: {willItRainResult.rainProbability}% de probabilidad de precipitación
+                  </Typography>
+                  
+                  {willItRainResult.temperatureData && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        🌡️ <strong>Temperatura máxima:</strong> {willItRainResult.temperatureData.max}°C
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        🌡️ <strong>Temperatura mínima:</strong> {willItRainResult.temperatureData.min}°C
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        🌡️ <strong>Temperatura promedio:</strong> {willItRainResult.temperatureData.average}°C
+                      </Typography>
+                      
+                      {willItRainResult.temperatureData.status !== 'normal' && (
+                        <Box sx={{ mt: 1, p: 1, backgroundColor: willItRainResult.temperatureData.status === 'muy_alta' || willItRainResult.temperatureData.status === 'muy_baja' ? '#ffebee' : '#fff3e0', borderRadius: 1 }}>
+                          <Typography variant="body2" sx={{ color: willItRainResult.temperatureData.status === 'muy_alta' || willItRainResult.temperatureData.status === 'muy_baja' ? '#d32f2f' : '#f57c00' }}>
+                            ⚠️ <strong>Alerta de temperatura:</strong> {
+                              willItRainResult.temperatureData.status === 'muy_alta' ? 'Temperatura muy alta' :
+                              willItRainResult.temperatureData.status === 'muy_baja' ? 'Temperatura muy baja' :
+                              willItRainResult.temperatureData.status === 'alta' ? 'Temperatura alta' :
+                              'Temperatura baja'
+                            }
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+
+                  {willItRainResult.windData && (
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        💨 <strong>Viento:</strong> {willItRainResult.windData.status}
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        💨 <strong>Velocidad máxima:</strong> {willItRainResult.windData.max} km/h
+                      </Typography>
+                      <Typography variant="body1" sx={{ mb: 1 }}>
+                        💨 <strong>Velocidad promedio:</strong> {willItRainResult.windData.average} km/h
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {willItRainResult.maxPrecipitationMm > 0 && (
+                    <Typography variant="body2" sx={{ mt: 1, color: '#666' }}>
+                      💧 Precipitación máxima esperada: {willItRainResult.maxPrecipitationMm}mm
+                    </Typography>
+                  )}
+                </Box>
+              </Paper>
+              )}
+            </Box>
+            
+            {/* Botón para volver al mapa - Abajo, mismo ancho */}
+            <Box sx={{ 
+              width: '100%', 
+              maxWidth: '600px',
+              display: 'flex',
+              justifyContent: 'center'
+            }}>
+              <Button 
+                variant="contained" 
+                onClick={handleBackToMap}
+                fullWidth
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: 2,
+                  py: 3,
+                  fontSize: '1.3rem',
+                  fontWeight: 'bold',
+                  borderRadius: 3,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  color: '#1a237e',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 1)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                🗺️ Volver al mapa
+              </Button>
+            </Box>
+          </Box>
         )}
-      </Container>
     </Box>
   );
 };
