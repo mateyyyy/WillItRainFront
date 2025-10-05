@@ -241,10 +241,8 @@ const WeatherDashboard = () => {
         <Toolbar sx={{ minHeight: 48, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
           {/* profile block top-right */}
           <Box sx={{ position: 'absolute', right: 12, top: 8, display: 'flex', gap: 1, alignItems: 'center' }}>
-            {selectedProfile ? (
-              <Typography variant="subtitle2" sx={{ color: '#9FE8FF' }}>{selectedProfile.emoji} {selectedProfile.label}</Typography>
-            ) : null}
-            <Button onClick={() => setProfileDialogOpen(true)} size="small" sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.02)', px: 1, py: 0.25, borderRadius: 1, fontSize: '0.8rem' }}>Cambiar perfil</Button>
+            
+            <Button onClick={() => setProfileDialogOpen(true)} size="small" sx={{ ml: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'white', px: 1, py: 0.25, borderRadius: 1, fontSize: '0.8rem' }}>Cambiar perfil</Button>
           </Box>
           {/* Botón para volver al mapa - Abajo, mismo ancho */}
   {!showMap && 
@@ -400,7 +398,7 @@ const WeatherDashboard = () => {
         </Box>
       ) : null}
 
-      {/* Profile selection dialog on first load */}
+      {/* Profile selection dialog on first load */}  
         <Dialog open={profileDialogOpen} onClose={handleCloseProfileDialog} fullWidth maxWidth="sm">
           <DialogTitle sx={{ fontSize: '1.25rem', pb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -415,7 +413,7 @@ const WeatherDashboard = () => {
               <Tooltip title={"Conocer el clima permite planificar siembra, cosecha y riego, proteger cultivos de lluvias fuertes o heladas, y anticipar eventos extremos que podrían afectar animales y plantas."} arrow>
                 <Button
                   variant={selectedProfile && selectedProfile.key === 'agri' ? 'contained' : 'outlined'}
-                  onClick={() => { setSelectedProfile({ key: 'agri', label: 'Agricultura / Ganadería', emoji: '🌾' }); }}
+                  onClick={() => { setSelectedProfile({ key: 'agri', label: 'Agricultura / Ganadería', emoji: '🌾' }); handleCloseProfileDialog()}}
                   sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
                 >
                   <Box component="span" sx={{ fontSize: '3rem', lineHeight: 1 }}>{'🌾'}</Box>
@@ -426,7 +424,7 @@ const WeatherDashboard = () => {
               <Tooltip title={"La previsión del clima ayuda a decidir la fecha y logística de eventos al aire libre, evitando cancelaciones, accidentes o incomodidades por lluvia, calor extremo o viento fuerte."} arrow>
                 <Button
                   variant={selectedProfile && selectedProfile.key === 'events' ? 'contained' : 'outlined'}
-                  onClick={() => { setSelectedProfile({ key: 'events', label: 'Eventos al aire libre / Recreación', emoji: '🎪' }); }}
+                  onClick={() => { setSelectedProfile({ key: 'events', label: 'Eventos al aire libre / Recreación', emoji: '🎪' }); handleCloseProfileDialog();}}
                   sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
                 >
                   <Box component="span" sx={{ fontSize: '3rem', lineHeight: 1 }}>{'🎪'}</Box>
@@ -437,7 +435,7 @@ const WeatherDashboard = () => {
               <Tooltip title={"La prevención del clima permite planificar rutas seguras en carreteras, vías férreas, puertos y aeropuertos, reduciendo riesgos de accidentes por lluvia intensa, tormentas o visibilidad limitada."} arrow>
                 <Button
                   variant={selectedProfile && selectedProfile.key === 'transport' ? 'contained' : 'outlined'}
-                  onClick={() => { setSelectedProfile({ key: 'transport', label: 'Transporte / Navegación', emoji: '🚢' }); }}
+                  onClick={() => { setSelectedProfile({ key: 'transport', label: 'Transporte / Navegación', emoji: '🚢' }); handleCloseProfileDialog(); }}
                   sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
                 >
                   <Box component="span" sx={{ fontSize: '3rem', lineHeight: 1 }}>{'🚢'}</Box>
@@ -448,7 +446,7 @@ const WeatherDashboard = () => {
               <Tooltip title={"Conocer la previsión meteorológica ayuda a tomar decisiones cotidianas: vestimenta, protección de viviendas, evitar actividades peligrosas bajo lluvia o tormentas y optimizar consumo de energía en días extremos."} arrow>
                 <Button
                   variant={selectedProfile && selectedProfile.key === 'home' ? 'contained' : 'outlined'}
-                  onClick={() => { setSelectedProfile({ key: 'home', label: 'Uso diario / Hogar', emoji: '🏠' }); }}
+                  onClick={() => { setSelectedProfile({ key: 'home', label: 'Uso diario / Hogar', emoji: '🏠' }); handleCloseProfileDialog(); }}
                   sx={{ py: 2.5, px: 2, minHeight: 110, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, fontSize: '1rem', transition: 'transform 180ms ease', '&:hover': { transform: 'scale(1.04)' } }}
                 >
                   <Box component="span" sx={{ fontSize: '3rem', lineHeight: 1 }}>{'🏠'}</Box>
@@ -669,44 +667,89 @@ const WeatherDashboard = () => {
                           <Typography variant="body2" sx={{ fontWeight: 'bold', minWidth: 35, textAlign: 'right' }}>{item.value}%</Typography>
                         </Paper>
                       ))}
+{selectedProfile && climatology && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>💡 Recomendaciones para ti ({selectedProfile.label})</Typography>
+                    <Paper sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
+                      <Typography variant="body2">
+                        {(() => {
+                          const { key } = selectedProfile;
+                          const rainProb = (climatology.probabilities.prob_very_wet_above_5mm || 0) * 100;
+                          const windProb = (climatology.probabilities.prob_very_windy_above_8ms || 0) * 100;
+                          const hotProb = (climatology.probabilities.prob_very_hot_above_33C || 0) * 100;
+                          const coldProb = (climatology.probabilities.prob_very_cold_below_0C || 0) * 100;
 
+                          switch (key) {
+                            case 'agri':
+                              if (rainProb > 60) return '🌱 Buen momento para sembrar o regar tus cultivos.';
+                              if (hotProb > 50) return '🌾 Calor intenso: protege los cultivos del estrés térmico.';
+                              if (coldProb > 40) return '❄️ Riesgo de heladas: resguarda tus plantas sensibles.';
+                              return '🌿 Condiciones estables para la agricultura.';
+
+                            case 'events':
+                              if (rainProb > 40) return '☔ Considera posponer o mover tu evento, podría llover.';
+                              if (windProb > 50) return '💨 Atención al viento: estructuras y carpas podrían verse afectadas.';
+                              if (coldProb > 40) return '🥶 Clima muy frío: asegurá abrigo y calefacción para los asistentes.';
+                              if (hotProb > 50) return '🌡️ Calor extremo: hidratación y sombra recomendadas.';
+                              return '🎉 Buen clima para actividades al aire libre.';
+
+                            case 'transport':
+                              if (rainProb > 50) return '🚢 Riesgo de lluvia: revisa navegación y rutas de transporte.';
+                              if (windProb > 60) return '💨 Viento fuerte: prudencia en rutas marítimas o aéreas.';
+                              if (coldProb > 50) return '❄️ Posibles heladas o hielo en rutas: conduce con precaución.';
+                              return '🛳️ Condiciones seguras para transporte y navegación.';
+
+                            case 'home':
+                              if (rainProb > 50) return '🏠 Lluvia prevista: revisa ventanas y techos, lleva paraguas.';
+                              if (hotProb > 50) return '🌡️ Calor intenso: hidrátate y usa protección solar.';
+                              if (coldProb > 40) return '🧊 Frío intenso: revisa calefacción y evita salir sin abrigo.';
+                              return '😊 Clima estable para tu día a día.';
+
+                            default:
+                              return '🌤️ Clima estable, disfruta tu día.';
+                          }
+                        })()}
+                      </Typography>
+                    </Paper>
+                  </Box>
+                )}
                       {/* Umbrales en fila */}
 
                       <Typography 
-  variant="subtitle1" 
-  sx={{ textAlign: 'center', fontWeight: 'bold', mb: 1, color: '#0d2833' }}
->
-  🌡️ Umbrales de Referencia
-</Typography>
+                        variant="subtitle1" 
+                        sx={{ textAlign: 'center', fontWeight: 'bold', mb: 1, color: '#0d2833' }}
+                      >
+                        🌡️ Umbrales de Referencia
+                      </Typography>
 
-<Paper
-  sx={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-    gap: 2,
-    p: 1,
-    borderRadius: 3,
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.9))',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-  }}
->
-  {[
-    { icon: '💧', label: 'Lluvia', value: climatology.thresholds_used?.wet_mm ?? '?', unit: 'mm', color: '#4fc3f7' },
-    { icon: '💨', label: 'Viento', value: climatology.thresholds_used?.windy_ms ?? '?', unit: 'm/s', color: '#90caf9' },
-    { icon: '🔥', label: 'Calor', value: climatology.thresholds_used?.hot_C ?? '?', unit: '°C', color: '#ff8a65' },
-    { icon: '❄️', label: 'Frío', value: climatology.thresholds_used?.cold_C ?? '?', unit: '°C', color: '#81d4fa' },
-  ].map((item, idx) => (
-    <Box key={idx} sx={{ textAlign: 'center' }}>
-      <Box sx={{ fontSize: '1.8rem', mb: 0.5 }}>{item.icon}</Box>
-      <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
-        {item.label}
-      </Typography>
-      <Typography variant="body2" sx={{ color: item.color }}>
-        <strong>{item.value}</strong> {item.unit}
-      </Typography>
-    </Box>
-  ))}
-</Paper>
+                      <Paper
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                          gap: 2,
+                          p: 1,
+                          borderRadius: 3,
+                          background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.9))',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                        }}
+                      >
+                        {[
+                          { icon: '💧', label: 'Lluvia', value: climatology.thresholds_used?.wet_mm ?? '?', unit: 'mm', color: '#4fc3f7' },
+                          { icon: '💨', label: 'Viento', value: climatology.thresholds_used?.windy_ms ?? '?', unit: 'm/s', color: '#90caf9' },
+                          { icon: '🔥', label: 'Calor', value: climatology.thresholds_used?.hot_C ?? '?', unit: '°C', color: '#ff8a65' },
+                          { icon: '❄️', label: 'Frío', value: climatology.thresholds_used?.cold_C ?? '?', unit: '°C', color: '#81d4fa' },
+                        ].map((item, idx) => (
+                          <Box key={idx} sx={{ textAlign: 'center' }}>
+                            <Box sx={{ fontSize: '1.8rem', mb: 0.5 }}>{item.icon}</Box>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
+                              {item.label}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: item.color }}>
+                              <strong>{item.value}</strong> {item.unit}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Paper>
 
 
                       {/* Índice de incomodidad climática */}
@@ -739,44 +782,6 @@ const WeatherDashboard = () => {
                         Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}
                       </Typography>
                     </Box>
-                  </Box>
-                )}
-
-                {/* Recomendación personalizada según perfil */}
-                {selectedProfile && climatology && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="subtitle1" sx={{ mb: 1 }}>💡 Recomendaciones para ti ({selectedProfile.label})</Typography>
-                    <Paper sx={{ p: 2, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.9)' }}>
-                      <Typography variant="body2">
-                        {(() => {
-                          const { key } = selectedProfile;
-                          const rainProb = (climatology.probabilities.prob_very_wet_above_5mm || 0) * 100;
-                          const windProb = (climatology.probabilities.prob_very_windy_above_8ms || 0) * 100;
-                          const hotProb = (climatology.probabilities.prob_very_hot_above_33C || 0) * 100;
-
-                          switch(key) {
-                            case 'agri':
-                              if (rainProb > 60) return '🌱 ¡Buen momento para sembrar o regar tus cultivos!';
-                              if (hotProb > 50) return '🌾 Cuidado con el calor intenso, protege tus cultivos.';
-                              return '🌿 Condiciones estables para la agricultura.';
-                            case 'events':
-                              if (rainProb > 40) return '☔ Considera posponer o mover tu evento, podría llover.';
-                              if (windProb > 50) return '💨 Atención al viento: estructuras y carpas podrían verse afectadas.';
-                              return '🎉 Buen clima para actividades al aire libre.';
-                            case 'transport':
-                              if (rainProb > 50) return '🚢 Riesgo de lluvia: revisa navegación y rutas de transporte.';
-                              if (windProb > 60) return '💨 Viento fuerte: prudencia en rutas marítimas o aéreas.';
-                              return '🛳️ Condiciones seguras para transporte y navegación.';
-                            case 'home':
-                              if (rainProb > 50) return '🏠 Lluvia prevista: revisa ventanas y techos, lleva paraguas.';
-                              if (hotProb > 50) return '🌡️ Calor intenso: hidrátate y usa protección solar.';
-                              return '😊 Clima estable para tu día a día.';
-                            default:
-                              return '🌤️ Clima estable, disfruta tu día.';
-                          }
-                        })()}
-                      </Typography>
-                    </Paper>
                   </Box>
                 )}
 
