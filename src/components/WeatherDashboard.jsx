@@ -4,6 +4,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import MapClick from './MapClick';
 import { useState, useEffect } from 'react';
 
+// ...existing code...
+
 const WeatherDashboard = () => {
   const [selected, setSelected] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -14,6 +16,7 @@ const WeatherDashboard = () => {
   const [days, setDays] = useState(1);
   const [date, setDate] = useState('');
   const [willItRainResult, setWillItRainResult] = useState(null);
+  const [climatology, setClimatology] = useState(null);
   const [requestLoading, setRequestLoading] = useState(false);
   const [showMap, setShowMap] = useState(true); // Controla si mostrar el mapa o los resultados
   // location text fields removed; selection comes from map pin or search
@@ -43,6 +46,7 @@ const WeatherDashboard = () => {
       try {
         setRequestLoading(true);
         setWillItRainResult(null);
+        setClimatology(null);
         const params = new URLSearchParams();
         params.set('lat', String(selected.lat));
         params.set('lon', String(selected.lng));
@@ -50,7 +54,7 @@ const WeatherDashboard = () => {
         if (targetDate) params.set('date', targetDate);
         else params.set('hours', String(Number(days) * 24));
 
-  const url = `/api/willitrain?${params.toString()}`;
+  const url = `http://localhost:8000/climatology/d?${params.toString()}`;
         const res = await fetch(url);
         if (!res.ok) {
           const t = await res.text();
@@ -58,6 +62,14 @@ const WeatherDashboard = () => {
         }
         const json = await res.json();
         setWillItRainResult(json);
+        // After main prediction is ready, request climatology probabilities for the same date/location
+        try {
+          // prefer ISO date YYYY-MM-DD (targetDate is already in that format when mode==='date' or computed above)
+          if (targetDate) await fetchClimatology(selected.lat, selected.lng, targetDate);
+        } catch (e) {
+          // non-fatal
+          console.warn('Error fetching climatology after willitrain response', e);
+        }
       } catch (err) {
         console.error('Error requesting willitrain:', err);
         alert('Error al consultar el servidor: ' + (err.message || err));
@@ -66,6 +78,26 @@ const WeatherDashboard = () => {
       }
     })();
   };
+
+  // Fetch climatology probabilities from backend endpoint
+  async function fetchClimatology(lat, lon, dateISO) {
+    if (!lat || !lon || !dateISO) return;
+    try {
+      const url = `http://localhost:8000/climatology/?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&date=${encodeURIComponent(dateISO)}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn('Climatology fetch failed', res.status, await res.text());
+        setClimatology(null);
+        return;
+      }
+      const data = await res.json();
+      console.log(data)
+      setClimatology(data);
+    } catch (e) {
+      console.warn('Error fetching climatology', e);
+      setClimatology(null);
+    }
+  }
 
   // User selects between using the map pin or searching by city
   const [selectMode, setSelectMode] = useState('map'); // 'map' or 'city'
@@ -343,7 +375,6 @@ const WeatherDashboard = () => {
           </Paper>
         </Box>
       ) : null}
-      )}
 
       {/* Profile selection dialog on first load */}
         <Dialog open={profileDialogOpen} onClose={handleCloseProfileDialog} fullWidth maxWidth="sm">
@@ -570,6 +601,16 @@ const WeatherDashboard = () => {
                     <Typography variant="body2" sx={{ mt: 1, color: '#666' }}>
                       💧 Precipitación máxima esperada: {willItRainResult.maxPrecipitationMm}mm
                     </Typography>
+                  )}
+                  {/* Climatology probabilities returned from backend */}
+                  {climatology && climatology.probabilities && (
+                    <Box sx={{ mt: 3, p: 2, borderRadius: 2, backgroundColor: 'rgba(250,250,250,0.6)' }}>
+                      <Typography variant="subtitle1" sx={{ mb: 1 }}>📊 Probabilidades históricas (climatología)</Typography>
+                      <Typography variant="body2">Muy caliente (&gt; {climatology.thresholds_used?.hot_C ?? '?'}°C): {(climatology.probabilities.prob_very_hot_above_33C * 100).toFixed(0)}%</Typography>
+                      <Typography variant="body2">Muy ventoso (&gt; {climatology.thresholds_used?.windy_ms ?? '?'} m/s): {(climatology.probabilities.prob_very_windy_above_8ms * 100).toFixed(0)}%</Typography>
+                      <Typography variant="body2">Muy húmedo (&gt; {climatology.thresholds_used?.wet_mm ?? '?'} mm): {(climatology.probabilities.prob_very_wet_above_5mm * 100).toFixed(0)}%</Typography>
+                      <Typography variant="caption" sx={{ display: 'block', mt: 1, color: '#666' }}>Periodo histórico: {climatology.historical_period ?? '—'} • Día objetivo: {climatology.target_day_month ?? '—'}</Typography>
+                    </Box>
                   )}
                 </Box>
               </Paper>
